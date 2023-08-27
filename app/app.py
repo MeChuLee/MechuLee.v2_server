@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_pymongo import PyMongo
 from flask_cors import CORS
 import recommend
+import pandas as pd
 
 app = Flask(__name__)
 # app.config["MONGO_URI"] = "mongodb://localhost:27017/mechulee_db"
@@ -24,19 +25,26 @@ def post_test():
 
     return jsonify({'result': recommend_menu})
 
-# @app.route('/menu', methods=['GET'])
-# def get_all_menu_items():
-#     menu_items = mongo.db.menu_items
-#     output = []
+@app.route('/allmenu', methods=['GET'])
+def get_all_menu_items():
+    # menu_list.csv 파일을 데이터프레임으로 읽어옴
+    menu = pd.read_csv('app/menu_list.csv')
 
-#     for item in menu_items.find():
-#         output.append({
-#             'name': item['name'],
-#             'ingredients': item['ingredients'],
-#             'image_url': item['image_url']
-#         })
+    return jsonify({'result': menu['메뉴 이름'].tolist()})
 
-#     return jsonify({'result': output})
+@app.route('/allingredient', methods=['GET'])
+def get_all_ingredient_items():
+    # menu_list.csv 파일을 데이터프레임으로 읽어옴
+    ingredients = pd.read_csv('app/ingredient_list.csv')
+
+    ingredient_list = []
+    for _, row in ingredients.iterrows():
+        ingredient = {}
+        ingredient['name'] = row['재료 이름']
+        ingredient['classification'] = row['분류']
+        ingredient_list.append(ingredient)
+
+    return jsonify({'result': ingredient_list})
 
 if __name__ == '__main__':
     app.run(debug=True)

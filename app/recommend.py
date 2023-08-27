@@ -7,7 +7,7 @@ from scipy.stats import beta as beta_dist
 
 def read_meun_data():
     # menu_list.csv 파일을 데이터프레임으로 읽어옴
-    menu = pd.read_csv('menu_list.csv')
+    menu = pd.read_csv('app/menu_list.csv')
 
     # 딕셔너리 초기화
     menu_data = {}

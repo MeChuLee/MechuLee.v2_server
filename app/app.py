@@ -28,9 +28,17 @@ def post_test():
 @app.route('/allmenu', methods=['GET'])
 def get_all_menu_items():
     # menu_list.csv 파일을 데이터프레임으로 읽어옴
-    menu = pd.read_csv('app/menu_list.csv')
+    menus = pd.read_csv('app/menu_list.csv')
+    
+    menu_list = []
+    for _, row in menus.iterrows():
+        menu = {}
+        menu['name'] = row['메뉴 이름']
+        menu['ingredients'] = row['재료']
+        menu['category'] = row['분류']
+        menu_list.append(menu)
 
-    return jsonify({'result': menu['메뉴 이름'].tolist()})
+    return jsonify({'menuList': menu_list})
 
 @app.route('/allingredient', methods=['GET'])
 def get_all_ingredient_items():
@@ -47,4 +55,4 @@ def get_all_ingredient_items():
     return jsonify({'result': ingredient_list})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=8000)

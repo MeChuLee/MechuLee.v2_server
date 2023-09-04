@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from collections import Counter
 from scipy.stats import beta as beta_dist
-
+import random
 
 def read_meun_data():
     # menu_list.csv 파일을 데이터프레임으로 읽어옴
@@ -13,17 +13,25 @@ def read_meun_data():
     menu_data = {}
     ingredients = set()
 
-    # 데이터프레임을 순회하며 '이름'과 '재료'를 딕셔너리에 저장
-    for index, row in menu.iterrows():
+    menu_list_dict = {}
+    for _, row in menu.iterrows():
+        # 데이터프레임을 순회하며 '이름'과 '재료'를 딕셔너리에 저장
         menu_name = row['메뉴 이름']
         menu_ingredients = list(row['재료'].split(', '))
         menu_data[menu_name] = menu_ingredients
         ingredients.update(menu_ingredients)
 
+        # 데이터프레임으로 읽어온 메뉴들을 list - dictionary 형태로 변형
+        menu = {}
+        menu['name'] = row['메뉴 이름']
+        menu['ingredients'] = row['재료']
+        menu['category'] = row['분류']
+        menu_list_dict[menu['name']] = menu
+
     # ingredients = ['밥', '김치', '고추장', '된장', '두부', '양파', '고춧가루', '대파', '계란']
     embedding_dict = {ingredient: np.random.randn(10) for ingredient in ingredients}
 
-    return embedding_dict, menu_data
+    return embedding_dict, menu_data, menu_list_dict
 
 def create_user_vector(liked_ingredients, embedding_dict):
     # 좋아하는 재료들의 출현 횟수 계산
@@ -39,7 +47,7 @@ def create_user_vector(liked_ingredients, embedding_dict):
 
 # 콘텐츠 기반 필터링을 통한 추천 (톰슨 샘플링 적용)
 def content_based_filtering_thompson(liked_ingredients, disliked_ingredients, num_recommendations=10, num_samples=10):
-    embedding_dict, menu_data = read_meun_data()
+    embedding_dict, menu_data, menu_list_dict = read_meun_data()
 
     # 사용자 선호 재료 벡터 생성
     user_vector = create_user_vector(liked_ingredients, embedding_dict)
@@ -79,4 +87,4 @@ def content_based_filtering_thompson(liked_ingredients, disliked_ingredients, nu
         recommended_menu = list(menu_data.keys())[recommended_menu_idx]
         recommended_menus.append(recommended_menu)
 
-    return recommended_menus
+    return menu_list_dict[recommended_menus[random.randint(0, 9)]]

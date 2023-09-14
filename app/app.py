@@ -38,7 +38,7 @@ def get_all_ingredient_items():
     ingredient_list = []
     for _, row in ingredients.iterrows():
         ingredient = {}
-        ingredient['name'] = row['재료 이름']
+        ingredient['title'] = row['재료 이름']
         ingredient['classification'] = row['분류']
         ingredient_list.append(ingredient)
 
@@ -63,7 +63,6 @@ def recommend_ai():
 @app.route('/recommend/similar', methods=['POST'])
 def recommend_similar():
     data = request.get_json()
-    current_menu = data['menu']
 
     # menu_list.csv 파일을 데이터프레임으로 read
     menus = pd.read_csv('app/menu_list.csv')
@@ -71,7 +70,7 @@ def recommend_similar():
     # 데이터프레임으로 읽어온 메뉴들을 list - dictionary 형태로 변형
     selected_items = []
     for _, row in menus.iterrows():
-        if current_menu['category'] == row['분류']:
+        if data['category'] == row['분류'] and data['name'] != row['메뉴 이름']:
             menu = {}
             menu['name'] = row['메뉴 이름']
             menu['ingredients'] = row['재료']
@@ -80,7 +79,7 @@ def recommend_similar():
 
     similar_menu_list = random.sample(selected_items, min(5, len(selected_items)))
 
-    return jsonify({'similarMenuList': similar_menu_list})
+    return jsonify({'menuList': similar_menu_list})
 
 
 # 재료 기반 추천

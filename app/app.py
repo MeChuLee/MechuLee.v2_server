@@ -4,11 +4,36 @@ from flask_cors import CORS
 import recommend
 import pandas as pd
 import random
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 # app.config["MONGO_URI"] = "mongodb://localhost:27017/mechulee_db"
 # mongo = PyMongo(app)
 CORS(app)
+
+# 오늘의 메뉴 리스트
+todays_menu = []
+
+# 오늘의 메뉴 선정
+def select_today_menu():
+    global todays_menu
+
+    menu_list = pd.read_csv('app/menu_list.csv')
+
+    # 새로운 메뉴 선택 전, 오늘의 메뉴 리스트 초기화
+    todays_menu.clear()
+
+    # 전체 인덱스에서 3개 선택하여 오늘의 메뉴로 선정
+    selected_indices = random.sample(range(len(menu_list)), 3)
+
+    for index in selected_indices:
+        menu_info = menu_list.iloc[index].to_dict()
+        menu = {}
+        menu['name'] = menu_info['메뉴 이름']
+        menu['ingredients'] = menu_info['재료']
+        menu['category'] = menu_info['분류']
+        todays_menu.append(menu)
+
 
 # 전체 메뉴 조회
 @app.route('/allmenu', methods=['GET'])
@@ -89,6 +114,22 @@ def recommend_ingredient():
     return jsonify({'result' : ingredient_menu_list})
 
 
+# 오늘의 추천
+@app.route('/recommend/today', methods=['GET'])
+def recommend_today():
+    return jsonify({'menuList' : todays_menu})
+
+
 if __name__ == '__main__':
+    scheduler = BackgroundScheduler(daemon=True)
+    
+    # 매일 자정에 select_menu 함수 실행 설정 
+    scheduler.add_job(select_today_menu,'cron', hour=0)
+    
+    scheduler.start()
+    
+    # 서버 시작 전, 첫 날의 메뉴 선택 
+    select_today_menu()
+
     # local 테스트를 위해 host='0.0.0.0' 로 설정 -> 추후 변경 필요
     app.run(host='0.0.0.0', debug=True, port=8000)

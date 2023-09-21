@@ -120,6 +120,23 @@ def recommend_today():
     return jsonify({'menuList' : todays_menu})
 
 
+# 랜덤 추천
+@app.route('/recommend/random', methods=['GET'])
+def recommend_random():
+    menu_list = pd.read_csv('app/menu_list.csv')
+
+    selected_index = random.sample(range(len(menu_list)), 1)
+
+    menu_info = menu_list.iloc[selected_index[0]].to_dict()
+
+    menu = {}
+    menu['name'] = menu_info['메뉴 이름']
+    menu['ingredients'] = menu_info['재료']
+    menu['category'] = menu_info['분류']
+
+    return jsonify({'menuInfo' : menu})
+
+
 if __name__ == '__main__':
     scheduler = BackgroundScheduler(daemon=True)
     

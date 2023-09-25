@@ -74,12 +74,35 @@ def get_all_ingredient_items():
 @app.route('/recommend/ai', methods=['POST'])
 def recommend_ai():
     data = request.get_json()
+    print(data)
+    totalList = []  # totalList 초기화 (IngredientInfo 객체를 포함하는 빈 리스트)
+    totalList = data
 
-    liked_ingredients = data['liked_ingredients']
-    disliked_ingredients = data['disliked_ingredients']
+    liked_ingredients = []
+    disliked_ingredients = []
 
+    # 전체 리스트에서 liked_ingredients,disliked_ingredients에는 title만 추가한다.
+    for ingredient_info in totalList:
+        rating = ingredient_info['rating']
+        if rating == 1: #평점이 1점인 경우 disliked_ingredients에 2번 삽입
+            disliked_ingredients.append(ingredient_info['title'])
+            disliked_ingredients.append(ingredient_info['title'])
+        elif rating == 2: #평점이 2점인 경우 disliked_ingredients에 1번 삽입
+            disliked_ingredients.append(ingredient_info['title'])
+        elif rating == 3: #평점이 3점인 경우 liked_ingredients에 1번 삽입
+            liked_ingredients.append(ingredient_info['title'])
+        elif rating == 4: #평점이 4점인 경우 liked_ingredients에 2번 삽입
+            liked_ingredients.append(ingredient_info['title'])
+            liked_ingredients.append(ingredient_info['title'])
+        elif rating == 5: #평점이 5점인 경우 liked_ingredients에 4번 삽입
+            liked_ingredients.append(ingredient_info['title'])
+            liked_ingredients.append(ingredient_info['title'])
+            liked_ingredients.append(ingredient_info['title'])
+            liked_ingredients.append(ingredient_info['title'])
+
+    #content_based_filterting_thompson을 text기반으로 수행하기 때문에 title리스트로 넣어준다.
     ai_menu = recommend.content_based_filtering_thompson(liked_ingredients, disliked_ingredients)
-    print(ai_menu)
+    print("메뉴 결과가 무엇일까요?~",ai_menu)
 
     return jsonify({'recommendAiResult': ai_menu})
 

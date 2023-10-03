@@ -9,24 +9,19 @@ from datetime import datetime
 def read_meun_data():
     # menu_list.csv 파일을 데이터프레임으로 읽어옴
     menu = pd.read_csv('app/menu_list.csv')
-
     ingredients = pd.read_csv('app/ingredient_list.csv')
 
-    # 여기서 시간과 날씨대로 먼저 메뉴를 거른다.
-
-    # '시간' 컬럼의 값이 낮인 행들만 선택하여 새로운 DataFrame 생성
-
+    # '시간' 컬럼의 값이 '낮' 또는 '밤'인 행 선택
     now = datetime.now()
-    for _, row in menu.iterrows():
-        if 7 <= now.hour < 19:
-            menu = menu[menu['시간'] == '낮']
-        else:
-            menu = menu[menu['시간'] == '밤']
+    is_daytime = 7 <= now.hour < 19
+    menu = menu.query("(시간 == '낮') == @is_daytime")
+
+    # '배달용' 컬럼이 'T'인 행 선택
+    menu = menu.query("배달용 == 'T'")
 
     for _, row in menu.iterrows():
-        print("메뉴 이름", row['메뉴 이름'],"시간", row['시간'])
+        print("메뉴 이름", row['메뉴 이름'],"시간", row['시간'], "날씨", row['날씨'], "배달용", row['배달용'])
         
-
     # 딕셔너리 초기화
     menu_data = {}
     menu_list_dict = {}
@@ -50,16 +45,15 @@ def read_meun_data():
         menu['category'] = row['분류']
         menu_list_dict[menu['name']] = menu
 
+    print()
+
     # ingredients = ['밥', '김치', '고추장', '된장', '두부', '양파', '고춧가루', '대파', '계란']
     embedding_dict = {ingredient: np.random.randn(10) for ingredient in ingredient_list}
-
-    
 
     return embedding_dict, menu_data, menu_list_dict
 
 def create_user_vector(liked_ingredients, embedding_dict):
-    print("좋아하는 재료들~~~~~~~~~~~~~~~~~~",liked_ingredients)
-
+    
     # 좋아하는 재료들의 출현 횟수 계산
     ingredient_counts = Counter(liked_ingredients)
     total_count = sum(ingredient_counts.values())
@@ -75,12 +69,12 @@ def create_user_vector(liked_ingredients, embedding_dict):
     return user_vector
 
 
-
 # 콘텐츠 기반 필터링을 통한 추천 (톰슨 샘플링 적용)
 def content_based_filtering_thompson(liked_ingredients, disliked_ingredients, num_recommendations=10, num_samples=10):
     embedding_dict, menu_data, menu_list_dict = read_meun_data()
-
-    print(disliked_ingredients)
+    print("좋아하는 재료들~~~~~~~~~~~~~~~~~~", liked_ingredients)
+    print("싫어하는 재료들~~~~~", disliked_ingredients)
+    print("얼갈이 어디간겨", embedding_dict)
 
     # 사용자 선호 재료 벡터 생성
     user_vector = create_user_vector(liked_ingredients, embedding_dict)

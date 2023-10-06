@@ -1,5 +1,11 @@
 import math
 
+def set_location(latitude, longitude):
+    print("변환 전 위도 경도", latitude, longitude)
+    x, y = dfs_xy_conv(latitude, longitude)
+    print("변환 후 x y 좌표", x, y)
+    return x, y
+
 def dfs_xy_conv(v1, v2):
     RE = 6371.00877  # 지구 반경(km)
     GRID = 5.0  # 격자 간격(km)
@@ -37,9 +43,3 @@ def dfs_xy_conv(v1, v2):
     y = int(ro - ra * math.cos(theta) + YO + 0.5)
 
     return str(x), str(y)
-
-# 테스트
-v1 = 36
-v2 = 127
-x, y = dfs_xy_conv(v1, v2)
-print(x, y)

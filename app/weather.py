@@ -1,6 +1,62 @@
 import requests
 import datetime
+from flask import g
 import location_util
+
+location_weather_data = {
+    "서울특별시": {"latitude": 37,"longitude": 127,"rainType": "","sky": "","temp": ""},
+    "부산광역시": {"latitude": 35,"longitude": 129,"rainType": "", "sky": "","temp": ""},
+    "대구광역시": {"latitude": 35,"longitude": 128,"rainType": "","sky": "","temp": ""},
+    "인천광역시": {"latitude": 37,"longitude": 126,"rainType": "","sky": "","temp": ""},
+    "광주광역시": {"latitude": 35,"longitude": 126,"rainType": "","sky": "","temp": ""},
+    "대전광역시": {"latitude": 36,"longitude": 127,"rainType": "","sky": "","temp": ""},
+    "울산광역시": {"latitude": 35,"longitude": 129,"rainType": "", "sky": "", "temp": ""},
+    "세종특별자치시": {"latitude": 36,"longitude": 127,"rainType": "", "sky": "", "temp": ""},
+    "경기도": {"latitude": 37,"longitude": 127,"rainType": "", "sky": "", "temp": ""},
+    "강원도": {"latitude": 37,"longitude": 128,"rainType": "", "sky": "", "temp": ""},
+    "충청북도": {"latitude": 36,"longitude": 127,"rainType": "", "sky": "", "temp": ""},
+    "충청남도": {"latitude": 36,"longitude": 126,"rainType": "", "sky": "", "temp": ""},
+    "전라북도": {"latitude": 35,"longitude": 127,"rainType": "", "sky": "", "temp": ""},
+    "전라남도": {"latitude": 34,"longitude": 126,"rainType": "", "sky": "", "temp": ""},
+    "경상북도": {"latitude": 36,"longitude": 128,"rainType": "", "sky": "", "temp": ""},
+    "경상남도": {"latitude": 35,"longitude": 128,"rainType": "", "sky": "", "temp": ""},
+    "제주특별자치도": {"latitude": 33,"longitude": 126,"rainType": "", "sky": "", "temp": ""},
+}
+
+def loading_location_weather_data():
+    for location_name in location_weather_data:
+        location_info = location_weather_data[location_name]
+        latitude = location_info["latitude"]
+        longitude = location_info["longitude"]
+
+        # 딕셔너리에 있는 value 수 만큼 api를 받아와서 날씨 정보에 저장한다.
+        rain_type, sky, temp = get_weatherinfo_from_api(latitude, longitude)
+        print(location_name, rain_type, sky, temp)
+        location_info["rainType"] = rain_type
+        location_info["sky"] = sky
+        location_info["temp"] = temp
+
+    print("모든 날씨정보 저장완료!!!!!")
+
+
+def get_weatherinfo_by_location(admin_area):
+    # 딕셔너리의 키(key) 값을 순회하는 반복문
+    for location_name in location_weather_data:
+        if location_name == admin_area:
+            location_info = location_weather_data[location_name]
+
+            rain_type = location_info["rainType"]
+            sky = location_info["sky"]
+            temp = location_info["temp"]
+
+            print(location_name, rain_type, sky, temp)
+
+            return rain_type, sky, temp
+        
+    #해당 도시 이름이 딕셔너리에 없는 경우 None을 반환
+    print("연결안됨")
+    return None, None, None
+    
 
 def calculate_one_hour_ago():
     # 현재 날짜와 시간을 가져옴
@@ -19,7 +75,7 @@ def calculate_one_hour_ago():
 
     return one_hour_ago_date, one_hour_ago_time
 
-def get_temperature_from_api():
+def get_weatherinfo_from_api(latitude, longitude):
 
     # 1시간 전의 시간을 먼저 가져온다.
     one_hour_ago_date, one_hour_ago_time = calculate_one_hour_ago()
@@ -32,17 +88,17 @@ def get_temperature_from_api():
     base_date = one_hour_ago_date  # 발표일자
     base_time = one_hour_ago_time  # 발표시각
 
-    #nx, ny = location_util.dfs_xy_conv(latitude, longitude) # 위도,경도 x-y좌표 변환
-    #print(nx, ny)
+    #TODO 주소를 주고 해당 좌표를 가져온다.
+    nx, ny = location_util.set_location(latitude, longitude)
 
-    #예시좌표
-    nx = '55'   # 예보지점 X좌표
-    ny = '127'  # 예보지점 Y좌표
+    # #예시좌표
+    # nx = '55'   # 예보지점 X좌표
+    # ny = '127'  # 예보지점 Y좌표
 
     weather_data = {
-        "PTY": "",  # 강수형태
-        "SKY": "",  # 하늘상태
-        "T1H": ""   # 기온
+        "rainType": "",  # 강수형태
+        "sky": "",  # 하늘상태
+        "temp": ""   # 기온
     }
 
     # 초단기 예보조회
@@ -71,34 +127,34 @@ def get_temperature_from_api():
 
         if index % 6 == 0 :
             if category == 'PTY' and fcstValue == '0':
-                weather_data["PTY"] = ""
+                weather_data["rainType"] = ""
             elif category == 'PTY' and fcstValue == '1':
-                weather_data["PTY"] = "비"
+                weather_data["rainType"] = "비"
             elif category == 'PTY' and fcstValue == '2':
-                weather_data["PTY"] = "비/눈"
+                weather_data["rainType"] = "비/눈"
             elif category == 'PTY' and fcstValue == '3':
-                weather_data["PTY"] = "눈"
+                weather_data["rainType"] = "눈"
             elif category == 'PTY' and fcstValue == '5':
-                weather_data["PTY"] = "빗방울"
+                weather_data["rainType"] = "빗방울"
             elif category == 'PTY' and fcstValue == '6':
-                weather_data["PTY"] = "빗방울눈날림"
+                weather_data["rainType"] = "빗방울눈날림"
             elif category == 'PTY' and fcstValue == '7':
-                weather_data["PTY"] = "눈날림"   
+                weather_data["rainType"] = "눈날림"   
             elif category == 'SKY' and fcstValue == '1':
-                weather_data["SKY"] = "맑음"
+                weather_data["sky"] = "맑음"
             elif category == 'SKY' and fcstValue == '3':
-                weather_data["SKY"] = "구름많음"
+                weather_data["sky"] = "구름많음"
             elif category == 'SKY' and fcstValue == '4':
-                weather_data["SKY"] = "흐림"                 
+                weather_data["sky"] = "흐림"                 
             elif category == 'T1H':
-                weather_data["T1H"] = fcstValue
+                weather_data["temp"] = fcstValue
 
         index+=1    
         #print(json.dumps(item, indent=4))  # 각 항목을 들여쓰기를 추가하여 출력합니다    
 
-    print(weather_data["PTY"], weather_data["SKY"], weather_data["T1H"])
+    print(weather_data["rainType"], weather_data["sky"], weather_data["temp"])
 
-    return weather_data # weather_data 딕셔너리를 반환
+    return weather_data["rainType"], weather_data["sky"], weather_data["temp"] # weather_data 딕셔너리를 반환
 
 # LGT, PTY, RN1, SKY, T1H, REH, UUU, VVV, VEC, WSD 10가지 카테고리(6가지 fcstTime)를 전부 출력하려면 한번에 60개를 조회해야함
 # 필요한건 기온까지이기때문에 30개까지만 조회해도 필요한 PTY, SKY, T1H값을

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 from flask_pymongo import PyMongo
 from flask_cors import CORS
 import recommend
@@ -157,46 +157,24 @@ def recommend_random():
 
     return jsonify({'menuInfo' : menu})
 
+# 날씨 조회
+@app.route('/weather', methods=['GET'])
+def get_weather_info():
+    # 특별시/광역시/특별자치시, 도/특별자치도, 지역명 받아오기
+    # 'adminArea' 쿼리 매개변수를 추출하여 사용
+    admin_area = request.args.get('adminArea')
+    print("현재 지역 위치", admin_area)
 
-# 좌표 받아오기
-@app.route('/location', methods=['GET'])
-def save_location():
-    
-    latitude = request.args.get('latitude', type=int)
-    longitude = request.args.get('longitude', type=int)
+    rain_type, sky, temp = weather.get_weatherinfo_by_location(admin_area)
 
-    # config에 값을 저장
-    app.config['latitude'] = latitude
-    app.config['longitude'] = longitude
-
-    # 위도와 경도 값을 받아서 출력
-    print("Received latitude={} and longitude={}".format(app.config['latitude'], app.config['longitude']))
-
-    
-    # 예를 들어, JSON 응답을 반환
-    response_data = {
-        "latitude": latitude,
-        "longitude": longitude,
-        "message": "Received latitude and longitude successfully."
+     # 날씨 정보를 JSON 형식으로 패킹해서 반환
+    weather_info = {
+        "rainType": rain_type,
+        "sky": sky,
+        "temp": temp
     }
 
-    return jsonify(response_data)
-
-
-# 좌표 받아와서 날씨api요청보내고 필요한 값들을 앱으로 반환
-@app.route('/weather', methods=['GET'])
-def get_location_and_send_weather():
-
-    latitude = request.args.get('latitude', type=int)
-    longitude = request.args.get('longitude', type=int)
-
-    # 여기서 위도 경도를 받아둔다음에 8도 좌표랑 비교해서
-    # 어디 지역에 속하는 지를 결정한다음 반환값을 함수에 넣어준다.
-    
-    # 그 다음 날씨api조회 함수에서 지역에 따른 좌표값을 넣어서 api조회
-    weatherInfo = weather.get_temperature_from_api
-
-    return jsonify({'weatherInfo' : weatherInfo})
+    return jsonify({'weatherInfo' : weather_info})
 
 
 if __name__ == '__main__':
@@ -205,16 +183,16 @@ if __name__ == '__main__':
     # 매일 자정에 select_menu 함수 실행 설정 
     scheduler.add_job(select_today_menu,'cron', hour=0)
 
-    # 매 시간마다 get_temperature_and_store 함수 호출
-    scheduler.add_job(weather.get_temperature_from_api, 'interval', minutes=1)
+    # 매 시간마다 get_temperature_and_store 함수 호출 -> 날씨 정보 1시간마다 갱신
+    scheduler.add_job(weather.loading_location_weather_data, 'interval', minutes=30)
     
     scheduler.start()
     
     # 서버 시작 전, 첫 날의 메뉴 선택 
     select_today_menu()
 
-    # 서버 시작 하자마자 기온 받아두기
-    weather.get_temperature_from_api
+    # 서버 시작 하자마자 위치에 따른 기온 모두 받아두기
+    weather.loading_location_weather_data()
 
     # local 테스트를 위해 host='0.0.0.0' 로 설정 -> 추후 변경 필요
     app.run(host='0.0.0.0', debug=True, port=8000)

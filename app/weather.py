@@ -1,6 +1,5 @@
 import requests
 import datetime
-from flask import g
 import location_util
 
 location_weather_data = {
@@ -23,6 +22,7 @@ location_weather_data = {
     "제주특별자치도": {"latitude": 33,"longitude": 126,"rainType": "", "sky": "", "temp": ""},
 }
 
+
 def loading_location_weather_data():
     for location_name in location_weather_data:
         location_info = location_weather_data[location_name]
@@ -31,33 +31,27 @@ def loading_location_weather_data():
 
         # 딕셔너리에 있는 value 수 만큼 api를 받아와서 날씨 정보에 저장한다.
         rain_type, sky, temp = get_weatherinfo_from_api(latitude, longitude)
-        print(location_name, rain_type, sky, temp)
+        
         location_info["rainType"] = rain_type
         location_info["sky"] = sky
         location_info["temp"] = temp
 
-    print("모든 날씨정보 저장완료!!!!!")
-
 
 def get_weatherinfo_by_location(admin_area):
-    # 딕셔너리의 키(key) 값을 순회하는 반복문
-    for location_name in location_weather_data:
-        if location_name == admin_area:
-            location_info = location_weather_data[location_name]
+    if admin_area in location_weather_data: 
+        location_info = location_weather_data[admin_area]
 
-            rain_type = location_info["rainType"]
-            sky = location_info["sky"]
-            temp = location_info["temp"]
+        rain_type = location_info["rainType"]
+        sky = location_info["sky"]
+        temp = location_info["temp"]
 
-            print(location_name, rain_type, sky, temp)
-
-            return rain_type, sky, temp
+        return rain_type, sky, temp
+    else:
+        #해당 도시 이름이 딕셔너리에 없는 경우 None을 반환
+        print("연결안됨")
+        return None, None, None
         
-    #해당 도시 이름이 딕셔너리에 없는 경우 None을 반환
-    print("연결안됨")
-    return None, None, None
     
-
 def calculate_one_hour_ago():
     # 현재 날짜와 시간을 가져옴
     current_datetime = datetime.datetime.now()
@@ -71,14 +65,16 @@ def calculate_one_hour_ago():
     # 시간을 HHMM 형식으로 포맷팅
     one_hour_ago_time = one_hour_ago.strftime("%H%M")
 
-    print("1시간 전 시간:", one_hour_ago_time)
-
     return one_hour_ago_date, one_hour_ago_time
+
 
 def get_weatherinfo_from_api(latitude, longitude):
 
     # 1시간 전의 시간을 먼저 가져온다.
     one_hour_ago_date, one_hour_ago_time = calculate_one_hour_ago()
+
+    # LGT, PTY, RN1, SKY, T1H, REH, UUU, VVV, VEC, WSD 10가지 카테고리(6가지 fcstTime)를 전부 출력하려면 한번에 60개를 조회해야함
+    # 필요한건 기온까지이기때문에 30개까지만 조회해도 필요한 PTY, SKY, T1H값을 전부 가져올 수 있음
 
     # 서비스키(decoding)
     serviceKey = 'Ux3PVlwB8oN9L6Vj/tQUyxOw2lE+EgBDF9cRJMC1QjOYRLNycIvKbjTNF0PVIdtNRIr1SUNi07syDl7VaNLXkw==' 
@@ -87,13 +83,7 @@ def get_weatherinfo_from_api(latitude, longitude):
     dataType = 'JSON'   # 응답자료형식
     base_date = one_hour_ago_date  # 발표일자
     base_time = one_hour_ago_time  # 발표시각
-
-    #TODO 주소를 주고 해당 좌표를 가져온다.
     nx, ny = location_util.set_location(latitude, longitude)
-
-    # #예시좌표
-    # nx = '55'   # 예보지점 X좌표
-    # ny = '127'  # 예보지점 Y좌표
 
     weather_data = {
         "rainType": "",  # 강수형태
@@ -124,7 +114,7 @@ def get_weatherinfo_from_api(latitude, longitude):
         fcstValue = item['fcstValue']
         
         index = 0
-
+        
         if index % 6 == 0 :
             if category == 'PTY' and fcstValue == '0':
                 weather_data["rainType"] = ""
@@ -150,17 +140,6 @@ def get_weatherinfo_from_api(latitude, longitude):
                 weather_data["temp"] = fcstValue
 
         index+=1    
-        #print(json.dumps(item, indent=4))  # 각 항목을 들여쓰기를 추가하여 출력합니다    
-
-    print(weather_data["rainType"], weather_data["sky"], weather_data["temp"])
 
     return weather_data["rainType"], weather_data["sky"], weather_data["temp"] # weather_data 딕셔너리를 반환
-
-# LGT, PTY, RN1, SKY, T1H, REH, UUU, VVV, VEC, WSD 10가지 카테고리(6가지 fcstTime)를 전부 출력하려면 한번에 60개를 조회해야함
-# 필요한건 기온까지이기때문에 30개까지만 조회해도 필요한 PTY, SKY, T1H값을
-# 전부 가져올 수 있음
-
-# # 함수 호출하여 반환 값을 변수에 저장
-# temperature_value = get_temperature_from_api()
-# print(temperature_value)
 

@@ -157,13 +157,13 @@ def recommend_random():
 
     return jsonify({'menuInfo' : menu})
 
+
 # 날씨 조회
 @app.route('/weather', methods=['GET'])
 def get_weather_info():
     # 특별시/광역시/특별자치시, 도/특별자치도, 지역명 받아오기
     # 'adminArea' 쿼리 매개변수를 추출하여 사용
     admin_area = request.args.get('adminArea')
-    print("현재 지역 위치", admin_area)
 
     rain_type, sky, temp = weather.get_weatherinfo_by_location(admin_area)
 
@@ -183,7 +183,7 @@ if __name__ == '__main__':
     # 매일 자정에 select_menu 함수 실행 설정 
     scheduler.add_job(select_today_menu,'cron', hour=0)
 
-    # 매 시간마다 get_temperature_and_store 함수 호출 -> 날씨 정보 1시간마다 갱신
+    # 매 시간마다 get_temperature_and_store 함수 호출 -> 날씨 정보 30분마다 갱신
     scheduler.add_job(weather.loading_location_weather_data, 'interval', minutes=30)
     
     scheduler.start()

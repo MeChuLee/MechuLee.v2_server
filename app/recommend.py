@@ -45,12 +45,11 @@ def read_meun_data():
         menu['category'] = row['분류']
         menu_list_dict[menu['name']] = menu
 
-    print()
-
     # ingredients = ['밥', '김치', '고추장', '된장', '두부', '양파', '고춧가루', '대파', '계란']
     embedding_dict = {ingredient: np.random.randn(10) for ingredient in ingredient_list}
 
     return embedding_dict, menu_data, menu_list_dict
+
 
 def create_user_vector(liked_ingredients, embedding_dict):
     
@@ -63,8 +62,6 @@ def create_user_vector(liked_ingredients, embedding_dict):
                         for ingredient in ingredient_counts]
 
     user_vector = np.sum(weighted_vectors, axis=0)
-    
-    print("확인한다",user_vector)
 
     return user_vector
 
@@ -72,9 +69,6 @@ def create_user_vector(liked_ingredients, embedding_dict):
 # 콘텐츠 기반 필터링을 통한 추천 (톰슨 샘플링 적용)
 def content_based_filtering_thompson(liked_ingredients, disliked_ingredients, num_recommendations=10, num_samples=10):
     embedding_dict, menu_data, menu_list_dict = read_meun_data()
-    print("좋아하는 재료들~~~~~~~~~~~~~~~~~~", liked_ingredients)
-    print("싫어하는 재료들~~~~~", disliked_ingredients)
-    print("얼갈이 어디간겨", embedding_dict)
 
     # 사용자 선호 재료 벡터 생성
     user_vector = create_user_vector(liked_ingredients, embedding_dict)

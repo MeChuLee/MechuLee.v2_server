@@ -1,14 +1,39 @@
 from flask import Flask, request, jsonify
-from flask_pymongo import PyMongo
 from flask_cors import CORS
 import recommend
 import pandas as pd
 import random
 from apscheduler.schedulers.background import BackgroundScheduler
+from pymongo import MongoClient
 
 app = Flask(__name__)
-# app.config["MONGO_URI"] = "mongodb://localhost:27017/mechulee_db"
-# mongo = PyMongo(app)
+
+# MongoDB 연결
+client = MongoClient("mongodb://localhost:27017/")
+
+# 데이터베이스 이름 
+db = client.mechulee_db
+
+# 컬렉션 이름
+collection_menu = db.menu_list
+collection_ingredient = db.ingredient_list
+
+# 조회하는거 하기 전에 메뉴의 재료 부분 array인거 수정해줘야 동작가능
+
+# MongoDB에서 전체 메뉴 조회
+def select_menu_list(now_collection):
+    menu_list = []
+    for menu in now_collection.find({}, {'_id': False}):
+        menu_list.append(menu)
+    return menu_list
+
+# MongoDB에서 전체 재료 조회
+def select_ingredient_list(now_collection):
+    ingredient_list = []
+    for ingredient in now_collection.find({}, {'_id': False}):
+        ingredient_list.append(ingredient)
+    return ingredient_list
+
 CORS(app)
 
 # 오늘의 메뉴 리스트
@@ -19,12 +44,15 @@ def select_today_menu():
     global todays_menu
 
     menu_list = pd.read_csv('app/menu_list.csv')
+    # menu_list2 = select_menu_list(collection_menu)
 
     # 새로운 메뉴 선택 전, 오늘의 메뉴 리스트 초기화
     todays_menu.clear()
 
     # 전체 인덱스에서 3개 선택하여 오늘의 메뉴로 선정
     selected_indices = random.sample(range(len(menu_list)), 3)
+
+    # temp = []
 
     for index in selected_indices:
         menu_info = menu_list.iloc[index].to_dict()
@@ -33,6 +61,16 @@ def select_today_menu():
         menu['ingredients'] = menu_info['재료']
         menu['category'] = menu_info['분류']
         todays_menu.append(menu)
+
+    #     menu_info2 = menu_list2[index]
+    #     menu2 = {}
+    #     menu2['name'] = menu_info2['name']
+    #     menu2['ingredients'] = menu_info2['ingredients']
+    #     menu2['category'] = menu_info2['classification']
+    #     temp.append(menu2)
+
+    # print("오늘 메뉴 확인", todays_menu)
+    # print("임시 확인", temp)
 
 
 # 전체 메뉴 조회
@@ -160,6 +198,32 @@ def recommend_random():
     return jsonify({'menuInfo' : menu})
 
 
+# 좌표 받아오기
+@app.route('/location', methods=['GET'])
+def save_location():
+    
+    latitude = request.args.get('latitude', type=int)
+    longitude = request.args.get('longitude', type=int)
+
+    # config에 값을 저장
+    app.config['latitude'] = latitude
+    app.config['longitude'] = longitude
+
+    # 위도와 경도 값을 받아서 출력
+    print("Received latitude={} and longitude={}".format(app.config['latitude'], app.config['longitude']))
+
+    
+    # 예를 들어, JSON 응답을 반환
+    response_data = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "message": "Received latitude and longitude successfully."
+    }
+
+    return jsonify(response_data)
+
+
+# 좌표 받아와서 날씨api요청보내고 필요한
 if __name__ == '__main__':
     scheduler = BackgroundScheduler(daemon=True)
     
@@ -167,9 +231,10 @@ if __name__ == '__main__':
     scheduler.add_job(select_today_menu,'cron', hour=0)
     
     scheduler.start()
-    
+
     # 서버 시작 전, 첫 날의 메뉴 선택 
     select_today_menu()
+
 
     # local 테스트를 위해 host='0.0.0.0' 로 설정 -> 추후 변경 필요
     app.run(host='0.0.0.0', debug=True, port=8000)

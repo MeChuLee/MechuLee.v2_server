@@ -5,6 +5,7 @@ from collections import Counter
 from scipy.stats import beta as beta_dist
 import random
 from datetime import datetime
+from gensim.models import KeyedVectors
 
 def read_meun_data():
     # menu_list.csv 파일을 데이터프레임으로 읽어옴
@@ -19,9 +20,6 @@ def read_meun_data():
     # '배달용' 컬럼이 'T'인 행 선택
     menu = menu.query("배달용 == 'T'")
 
-    for _, row in menu.iterrows():
-        print("메뉴 이름", row['메뉴 이름'],"시간", row['시간'], "날씨", row['날씨'], "배달용", row['배달용'])
-        
     # 딕셔너리 초기화
     menu_data = {}
     menu_list_dict = {}
@@ -45,11 +43,17 @@ def read_meun_data():
         menu['category'] = row['분류']
         menu_list_dict[menu['name']] = menu
 
-    # ingredients = ['밥', '김치', '고추장', '된장', '두부', '양파', '고춧가루', '대파', '계란']
-    embedding_dict = {ingredient: np.random.randn(10) for ingredient in ingredient_list}
+    print("model 로드 전")
 
+    # FastText의 사전 훈련된 워드 임베딩 로드
+    model = KeyedVectors.load_word2vec_format('app/cc.ko.300.vec', binary=False, limit=100000)
+
+    print("model 로드 완료")
+
+    # 각 재료에 대한 벡터 생성 (재료가 모델에 없으면 랜덤 벡터 사용)
+    embedding_dict = {ingredient: model[ingredient] if ingredient in model else np.random.randn(300) for ingredient in ingredient_list}
+    
     return embedding_dict, menu_data, menu_list_dict
-
 
 def create_user_vector(liked_ingredients, embedding_dict):
     
@@ -65,11 +69,8 @@ def create_user_vector(liked_ingredients, embedding_dict):
 
     return user_vector
 
-
 # 콘텐츠 기반 필터링을 통한 추천 (톰슨 샘플링 적용)
-def content_based_filtering_thompson(liked_ingredients, disliked_ingredients, num_recommendations=10, num_samples=10):
-    embedding_dict, menu_data, menu_list_dict = read_meun_data()
-
+def content_based_filtering_thompson(embedding_dict, menu_data, menu_list_dict, liked_ingredients, disliked_ingredients, num_recommendations=10, num_samples=10):
     # 사용자 선호 재료 벡터 생성
     user_vector = create_user_vector(liked_ingredients, embedding_dict)
 
@@ -108,7 +109,7 @@ def content_based_filtering_thompson(liked_ingredients, disliked_ingredients, nu
         recommended_menu = list(menu_data.keys())[recommended_menu_idx]
         recommended_menus.append(recommended_menu)
 
-    return menu_list_dict[recommended_menus[random.randint(0, 9)]]
+    return [menu_list_dict[recommended_menus[i]] for i in range(3)][random.randint(0, 2)]
 
 
-#content_based_filtering_thompson(["오리고기", "돼지고기", "생선", "파"],["김치", "쯔유"])
+#print(content_based_filtering_thompson(["오리고기", "오리고기", "오리고기", "생선", "파"],["김치", "쯔유"]))

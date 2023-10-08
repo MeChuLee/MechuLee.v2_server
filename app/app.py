@@ -16,6 +16,8 @@ CORS(app)
 # 오늘의 메뉴 리스트
 todays_menu = []
 
+# 컨텐츠 기반 필터링에서 사용할 메뉴와 재료 임베딩 정보
+embedding_dict, menu_data, menu_list_dict = recommend.read_meun_data()
 
 # 오늘의 메뉴 선정
 def select_today_menu():
@@ -99,8 +101,7 @@ def recommend_ai():
             liked_ingredients.extend([ingredient_info['title'], ingredient_info['title'], ingredient_info['title'], ingredient_info['title']])
 
     #content_based_filterting_thompson을 text기반으로 수행하기 때문에 title리스트로 넣어준다.
-    ai_menu = recommend.content_based_filtering_thompson(liked_ingredients, disliked_ingredients)
-    print("메뉴 결과가 무엇일까요?~", ai_menu)
+    ai_menu = recommend.content_based_filtering_thompson(embedding_dict, menu_data, menu_list_dict, liked_ingredients, disliked_ingredients)
 
     return jsonify({'recommendAiResult': ai_menu})
 

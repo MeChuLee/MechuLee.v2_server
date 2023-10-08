@@ -5,12 +5,38 @@ import recommend
 import pandas as pd
 import random
 from apscheduler.schedulers.background import BackgroundScheduler
+from pymongo import MongoClient
 from datetime import datetime
 import weather
 
 app = Flask(__name__)
-# app.config["MONGO_URI"] = "mongodb://localhost:27017/mechulee_db"
-# mongo = PyMongo(app)
+
+# MongoDB 연결
+client = MongoClient("mongodb://localhost:27017/")
+
+# 데이터베이스 이름 
+db = client.mechulee_db
+
+# 컬렉션 이름
+collection_menu = db.menu_list
+collection_ingredient = db.ingredient_list
+
+# 조회하는거 하기 전에 메뉴의 재료 부분 array인거 수정해줘야 동작가능
+
+# MongoDB에서 전체 메뉴 조회
+def select_menu_list(now_collection):
+    menu_list = []
+    for menu in now_collection.find({}, {'_id': False}):
+        menu_list.append(menu)
+    return menu_list
+
+# MongoDB에서 전체 재료 조회
+def select_ingredient_list(now_collection):
+    ingredient_list = []
+    for ingredient in now_collection.find({}, {'_id': False}):
+        ingredient_list.append(ingredient)
+    return ingredient_list
+
 CORS(app)
 
 # 오늘의 메뉴 리스트
@@ -22,14 +48,18 @@ embedding_dict, menu_data, menu_list_dict = recommend.read_meun_data()
 # 오늘의 메뉴 선정
 def select_today_menu():
     global todays_menu
-
-    menu_list = pd.read_csv('app/menu_list.csv')
+    
+    menu_list = select_menu_list(collection_menu)
+    # menu_list = pd.read_csv('app/menu_list.csv')
+    # menu_list2 = select_menu_list(collection_menu)
 
     # 새로운 메뉴 선택 전, 오늘의 메뉴 리스트 초기화
     todays_menu.clear()
 
     # 전체 인덱스에서 3개 선택하여 오늘의 메뉴로 선정
     selected_indices = random.sample(range(len(menu_list)), 3)
+
+    # temp = []
 
     for index in selected_indices:
         menu_info = menu_list.iloc[index].to_dict()
@@ -39,12 +69,24 @@ def select_today_menu():
         menu['category'] = menu_info['분류']
         todays_menu.append(menu)
 
+    #     menu_info2 = menu_list2[index]
+    #     menu2 = {}
+    #     menu2['name'] = menu_info2['name']
+    #     menu2['ingredients'] = menu_info2['ingredients']
+    #     menu2['category'] = menu_info2['classification']
+    #     temp.append(menu2)
+
+    # print("오늘 메뉴 확인", todays_menu)
+    # print("임시 확인", temp)
+
 
 # 전체 메뉴 조회
 @app.route('/allmenu', methods=['GET'])
 def get_all_menu_items():
     # menu_list.csv 파일을 데이터프레임으로 read
-    menus = pd.read_csv('app/menu_list.csv')
+    
+    menus = select_menu_list(collection_menu)
+    # menus = pd.read_csv('app/menu_list.csv')
     
     # 데이터프레임으로 읽어온 메뉴들을 list - dictionary 형태로 변형
     menu_list = []
@@ -62,7 +104,8 @@ def get_all_menu_items():
 @app.route('/allingredient', methods=['GET'])
 def get_all_ingredient_items():
     # ingredient_list.csv 파일을 데이터프레임으로 read
-    ingredients = pd.read_csv('app/ingredient_list.csv')
+    # ingredients = pd.read_csv('app/ingredient_list.csv')
+    ingredients = select_ingredient_list(collection_ingredient)
 
     # 데이터프레임으로 읽어온 재료들을 list - dictionary 형태로 변형
     ingredient_list = []
@@ -188,7 +231,7 @@ if __name__ == '__main__':
     scheduler.add_job(weather.loading_location_weather_data, 'interval', minutes=30)
     
     scheduler.start()
-    
+
     # 서버 시작 전, 첫 날의 메뉴 선택 
     select_today_menu()
 

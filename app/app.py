@@ -1,10 +1,13 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
+from flask_pymongo import PyMongo
 from flask_cors import CORS
 import recommend
 import pandas as pd
 import random
 from apscheduler.schedulers.background import BackgroundScheduler
 from pymongo import MongoClient
+from datetime import datetime
+import weather
 
 app = Flask(__name__)
 
@@ -39,11 +42,15 @@ CORS(app)
 # 오늘의 메뉴 리스트
 todays_menu = []
 
+# 컨텐츠 기반 필터링에서 사용할 메뉴와 재료 임베딩 정보
+embedding_dict, menu_data, menu_list_dict = recommend.read_meun_data()
+
 # 오늘의 메뉴 선정
 def select_today_menu():
     global todays_menu
-
-    menu_list = pd.read_csv('app/menu_list.csv')
+    
+    menu_list = select_menu_list(collection_menu)
+    # menu_list = pd.read_csv('app/menu_list.csv')
     # menu_list2 = select_menu_list(collection_menu)
 
     # 새로운 메뉴 선택 전, 오늘의 메뉴 리스트 초기화
@@ -77,7 +84,9 @@ def select_today_menu():
 @app.route('/allmenu', methods=['GET'])
 def get_all_menu_items():
     # menu_list.csv 파일을 데이터프레임으로 read
-    menus = pd.read_csv('app/menu_list.csv')
+    
+    menus = select_menu_list(collection_menu)
+    # menus = pd.read_csv('app/menu_list.csv')
     
     # 데이터프레임으로 읽어온 메뉴들을 list - dictionary 형태로 변형
     menu_list = []
@@ -95,7 +104,8 @@ def get_all_menu_items():
 @app.route('/allingredient', methods=['GET'])
 def get_all_ingredient_items():
     # ingredient_list.csv 파일을 데이터프레임으로 read
-    ingredients = pd.read_csv('app/ingredient_list.csv')
+    # ingredients = pd.read_csv('app/ingredient_list.csv')
+    ingredients = select_ingredient_list(collection_ingredient)
 
     # 데이터프레임으로 읽어온 재료들을 list - dictionary 형태로 변형
     ingredient_list = []
@@ -112,7 +122,7 @@ def get_all_ingredient_items():
 @app.route('/recommend/ai', methods=['POST'])
 def recommend_ai():
     data = request.get_json()
-    print(data)
+    
     totalList = []  # totalList 초기화 (IngredientInfo 객체를 포함하는 빈 리스트)
     totalList = data
 
@@ -123,24 +133,18 @@ def recommend_ai():
     for ingredient_info in totalList:
         rating = ingredient_info['rating']
         if rating == 1: #평점이 1점인 경우 disliked_ingredients에 2번 삽입
-            disliked_ingredients.append(ingredient_info['title'])
-            disliked_ingredients.append(ingredient_info['title'])
+            disliked_ingredients.extend([ingredient_info['title'], ingredient_info['title']])
         elif rating == 2: #평점이 2점인 경우 disliked_ingredients에 1번 삽입
             disliked_ingredients.append(ingredient_info['title'])
         elif rating == 3: #평점이 3점인 경우 liked_ingredients에 1번 삽입
             liked_ingredients.append(ingredient_info['title'])
         elif rating == 4: #평점이 4점인 경우 liked_ingredients에 2번 삽입
-            liked_ingredients.append(ingredient_info['title'])
-            liked_ingredients.append(ingredient_info['title'])
+            liked_ingredients.extend([ingredient_info['title'], ingredient_info['title']])
         elif rating == 5: #평점이 5점인 경우 liked_ingredients에 4번 삽입
-            liked_ingredients.append(ingredient_info['title'])
-            liked_ingredients.append(ingredient_info['title'])
-            liked_ingredients.append(ingredient_info['title'])
-            liked_ingredients.append(ingredient_info['title'])
+            liked_ingredients.extend([ingredient_info['title'], ingredient_info['title'], ingredient_info['title'], ingredient_info['title']])
 
     #content_based_filterting_thompson을 text기반으로 수행하기 때문에 title리스트로 넣어준다.
-    ai_menu = recommend.content_based_filtering_thompson(liked_ingredients, disliked_ingredients)
-    print("메뉴 결과가 무엇일까요?~",ai_menu)
+    ai_menu = recommend.content_based_filtering_thompson(embedding_dict, menu_data, menu_list_dict, liked_ingredients, disliked_ingredients)
 
     return jsonify({'recommendAiResult': ai_menu})
 
@@ -198,43 +202,47 @@ def recommend_random():
     return jsonify({'menuInfo' : menu})
 
 
-# 좌표 받아오기
-@app.route('/location', methods=['GET'])
-def save_location():
-    
-    latitude = request.args.get('latitude', type=int)
-    longitude = request.args.get('longitude', type=int)
+# 날씨 조회
+@app.route('/weather', methods=['GET'])
+def get_weather_info():
+    # 특별시/광역시/특별자치시, 도/특별자치도, 지역명 받아오기
+    # 'adminArea' 쿼리 매개변수를 추출하여 사용
+    admin_area = request.args.get('adminArea')
 
-    # config에 값을 저장
-    app.config['latitude'] = latitude
-    app.config['longitude'] = longitude
+    rain_type, sky, temp = weather.get_weatherinfo_by_location(admin_area)
 
-    # 위도와 경도 값을 받아서 출력
-    print("Received latitude={} and longitude={}".format(app.config['latitude'], app.config['longitude']))
-
-    
-    # 예를 들어, JSON 응답을 반환
-    response_data = {
-        "latitude": latitude,
-        "longitude": longitude,
-        "message": "Received latitude and longitude successfully."
+     # 날씨 정보를 JSON 형식으로 패킹해서 반환
+    weather_info = {
+        "rainType": rain_type,
+        "sky": sky,
+        "temp": temp
     }
 
-    return jsonify(response_data)
+    return jsonify({'weatherInfo' : weather_info})
 
 
-# 좌표 받아와서 날씨api요청보내고 필요한
 if __name__ == '__main__':
     scheduler = BackgroundScheduler(daemon=True)
     
     # 매일 자정에 select_menu 함수 실행 설정 
     scheduler.add_job(select_today_menu,'cron', hour=0)
+
+    # 매 시간마다 get_temperature_and_store 함수 호출 -> 날씨 정보 30분마다 갱신
+    scheduler.add_job(weather.loading_location_weather_data, 'interval', minutes=30)
     
     scheduler.start()
 
     # 서버 시작 전, 첫 날의 메뉴 선택 
     select_today_menu()
 
+    # 서버 시작 하자마자 위치에 따른 기온 모두 받아두기
+    weather.loading_location_weather_data()
 
     # local 테스트를 위해 host='0.0.0.0' 로 설정 -> 추후 변경 필요
     app.run(host='0.0.0.0', debug=True, port=8000)
+
+
+
+
+
+    

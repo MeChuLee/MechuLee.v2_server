@@ -10,19 +10,15 @@ from gensim.models import KeyedVectors
 def read_meun_data():
     # menu_list.csv 파일을 데이터프레임으로 읽어옴
     menu = pd.read_csv('app/menu_list.csv')
-
     ingredients = pd.read_csv('app/ingredient_list.csv')
 
-    # 여기서 시간과 날씨대로 먼저 메뉴를 거른다.
-
-    # '시간' 컬럼의 값이 낮인 행들만 선택하여 새로운 DataFrame 생성
-
+    # '시간' 컬럼의 값이 '낮' 또는 '밤'인 행 선택
     now = datetime.now()
-    for _, row in menu.iterrows():
-        if 7 <= now.hour < 19:
-            menu = menu[menu['시간'] == '낮']
-        else:
-            menu = menu[menu['시간'] == '밤']
+    is_daytime = 7 <= now.hour < 19
+    menu = menu.query("(시간 == '낮') == @is_daytime")
+
+    # '배달용' 컬럼이 'T'인 행 선택
+    menu = menu.query("배달용 == 'T'")
 
     # 딕셔너리 초기화
     menu_data = {}
@@ -60,14 +56,16 @@ def read_meun_data():
     return embedding_dict, menu_data, menu_list_dict
 
 def create_user_vector(liked_ingredients, embedding_dict):
-    # 각 재료별 출현 횟수 계산
+    
+    # 좋아하는 재료들의 출현 횟수 계산
     ingredient_counts = Counter(liked_ingredients)
+    total_count = sum(ingredient_counts.values())
+    
+    # 가중치를 적용한 벡터 계산
+    weighted_vectors = [embedding_dict[ingredient] * (ingredient_counts[ingredient] / total_count)
+                        for ingredient in ingredient_counts]
 
-    # 각 재료별 가중치 적용
-    weighted_vectors = [embedding_dict[ingredient] * count 
-                        for ingredient, count in ingredient_counts.items()]
-
-    user_vector = np.sum(weighted_vectors, axis=0) / len(liked_ingredients)
+    user_vector = np.sum(weighted_vectors, axis=0)
 
     return user_vector
 

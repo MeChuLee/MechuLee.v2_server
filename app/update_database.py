@@ -61,7 +61,7 @@ def export_ingredients(menu_data):
 
     # temp_ingredient_list.csv 파일로 저장
     # 이름만 바꿔주면 됩니다
-    with open('app/temp_ingredient_list.csv', 'w', encoding='utf-8', newline='') as f:
+    with open('app/ingredient_list.csv', 'w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['재료 이름', '분류'])
         writer.writerows(tempList)

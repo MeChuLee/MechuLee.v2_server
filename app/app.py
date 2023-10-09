@@ -79,7 +79,7 @@ def get_all_menu_items():
         menu = {}
         menu['name'] = row['name']
         menu['ingredients'] = row['ingredients']
-        menu['category'] = row['classification']
+        menu['category'] = row['category']
         menu_list.append(menu)
 
     return jsonify({'menuList': menu_list})
@@ -171,4 +171,4 @@ if __name__ == '__main__':
     weather.loading_location_weather_data()
 
     # local 테스트를 위해 host='0.0.0.0' 로 설정 -> 추후 변경 필요
-    app.run(host='0.0.0.0', debug=False, port=8000)
+    app.run(host='0.0.0.0', debug=True, port=8000)

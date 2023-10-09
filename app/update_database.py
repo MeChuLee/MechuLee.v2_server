@@ -29,7 +29,7 @@ def save_menu_data(now_collection, menu_data):
         jsonData['weather'] = list(menu_data["날씨"])[i]
         jsonData['time'] = list(menu_data["시간"])[i]
         jsonData['type'] = list(menu_data["종류"])[i]
-        jsonData['classification'] = list(menu_data["분류"])[i]
+        jsonData['category'] = list(menu_data["분류"])[i]
         jsonData['delivery'] = True if list(menu_data["배달용"])[i] == 'T' else False
 
         jsonList.append(jsonData)

@@ -7,18 +7,22 @@ import random
 from datetime import datetime
 from gensim.models import KeyedVectors
 
-def read_meun_data():
-    # menu_list.csv 파일을 데이터프레임으로 읽어옴
-    menu = pd.read_csv('app/menu_list.csv')
-    ingredients = pd.read_csv('app/ingredient_list.csv')
-
+def read_meun_data(menu, ingredients):
     # '시간' 컬럼의 값이 '낮' 또는 '밤'인 행 선택
     now = datetime.now()
     is_daytime = 7 <= now.hour < 19
-    menu = menu.query("(시간 == '낮') == @is_daytime")
-
-    # '배달용' 컬럼이 'T'인 행 선택
-    menu = menu.query("배달용 == 'T'")
+    temp_menu = []
+    
+    for row in menu:
+        if row['배달용'] == 'F': # 배달용인 경우만 처리
+            continue 
+        
+        if is_daytime: # 낮인 상황
+            if row['시간'] == '낮':
+                temp_menu.append(row)
+        else: # 밤인 상황
+            if row['시간'] == '밤':
+                temp_menu.append(row)
 
     # 딕셔너리 초기화
     menu_data = {}
@@ -26,21 +30,21 @@ def read_meun_data():
 
     ingredient_list = []
 
-    for _, row in ingredients.iterrows():
-        ingredient_list.append(row['재료 이름'])
+    for row in ingredients:
+        ingredient_list.append(row['name'])
 
-    for _, row in menu.iterrows():
-        
+    for row in temp_menu:
         # 데이터프레임을 순회하며 '이름'과 '재료'를 딕셔너리에 저장
-        menu_name = row['메뉴 이름']
-        menu_ingredients = list(row['재료'].split(', '))
+        menu_name = row['name']
+        menu_ingredients = row['ingredients']
         menu_data[menu_name] = menu_ingredients
 
         # 데이터프레임으로 읽어온 메뉴들을 list - dictionary 형태로 변형
         menu = {}
-        menu['name'] = row['메뉴 이름']
-        menu['ingredients'] = row['재료']
-        menu['category'] = row['분류']
+        menu['name'] = row['name']
+        menu['ingredients'] = row['ingredients']
+        menu['category'] = row['category']
+
         menu_list_dict[menu['name']] = menu
 
     print("model 로드 전")
@@ -55,6 +59,7 @@ def read_meun_data():
     
     return embedding_dict, menu_data, menu_list_dict
 
+
 def create_user_vector(liked_ingredients, embedding_dict):
     
     # 좋아하는 재료들의 출현 횟수 계산
@@ -68,6 +73,7 @@ def create_user_vector(liked_ingredients, embedding_dict):
     user_vector = np.sum(weighted_vectors, axis=0)
 
     return user_vector
+
 
 # 콘텐츠 기반 필터링을 통한 추천 (톰슨 샘플링 적용)
 def content_based_filtering_thompson(embedding_dict, menu_data, menu_list_dict, liked_ingredients, disliked_ingredients, num_recommendations=10, num_samples=10):
@@ -110,6 +116,3 @@ def content_based_filtering_thompson(embedding_dict, menu_data, menu_list_dict, 
         recommended_menus.append(recommended_menu)
 
     return [menu_list_dict[recommended_menus[i]] for i in range(3)][random.randint(0, 2)]
-
-
-#print(content_based_filtering_thompson(["오리고기", "오리고기", "오리고기", "생선", "파"],["김치", "쯔유"]))

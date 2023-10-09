@@ -29,12 +29,24 @@ def loading_location_weather_data():
         latitude = location_info["latitude"]
         longitude = location_info["longitude"]
 
-        # 딕셔너리에 있는 value 수 만큼 api를 받아와서 날씨 정보에 저장한다.
-        rain_type, sky, temp = get_weatherinfo_from_api(latitude, longitude)
+        for i in range(10):
+            try:
+                # 딕셔너리에 있는 value 수 만큼 api를 받아와서 날씨 정보에 저장한다.
+                rain_type, sky, temp = get_weatherinfo_from_api(latitude, longitude)
+                break
+            except Exception as e:
+                if i < 9:  # 아직 최대 시도 횟수에 도달하지 않았다면...
+                    print("실패, 재시도")
+                    continue  # 다음 시도로 넘어감
+                else:  # 최대 시도 횟수에 도달했다면...
+                    print("실패")
+                    raise e from None 
         
         location_info["rainType"] = rain_type
         location_info["sky"] = sky
         location_info["temp"] = temp
+
+        print(location_info)
 
 
 def get_weatherinfo_by_location(admin_area):

@@ -14,14 +14,14 @@ def read_meun_data(menu, ingredients):
     temp_menu = []
     
     for row in menu:
-        if row['배달용'] == 'F': # 배달용인 경우만 처리
+        if row['delivery'] == 'F': # 배달용인 경우만 처리
             continue 
         
         if is_daytime: # 낮인 상황
-            if row['시간'] == '낮':
+            if row['time'] == '낮':
                 temp_menu.append(row)
         else: # 밤인 상황
-            if row['시간'] == '밤':
+            if row['time'] == '밤':
                 temp_menu.append(row)
 
     # 딕셔너리 초기화

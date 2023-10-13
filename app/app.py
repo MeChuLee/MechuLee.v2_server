@@ -103,8 +103,11 @@ def get_all_ingredient_items():
 # ai 추천 (liked_ingredients, disliked_ingredients 필요)
 @app.route('/recommend/ai', methods=['POST'])
 def recommend_ai():
+    menu_list = select_menu_list(collection_menu)
+    ingredient_list = select_ingredient_list(collection_ingredient)
+
     # 컨텐츠 기반 필터링에서 사용할 메뉴와 재료 임베딩 정보
-    embedding_dict, menu_data, menu_list_dict = recommend.read_meun_data()
+    embedding_dict, menu_data, menu_list_dict = recommend.read_meun_data(menu_list, ingredient_list)
     
     data = request.get_json()
     

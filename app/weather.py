@@ -1,6 +1,7 @@
 import requests
 import datetime
 import location_util
+import local_properties
 
 location_weather_data = {
     "서울특별시": {"latitude": 37,"longitude": 127,"rainType": "","sky": "","temp": ""},
@@ -62,8 +63,8 @@ def get_weatherinfo_by_location(admin_area):
         #해당 도시 이름이 딕셔너리에 없는 경우 None을 반환
         print("연결안됨")
         return None, None, None
-        
-    
+
+
 def calculate_one_hour_ago():
     # 현재 날짜와 시간을 가져옴
     current_datetime = datetime.datetime.now()
@@ -81,7 +82,6 @@ def calculate_one_hour_ago():
 
 
 def get_weatherinfo_from_api(latitude, longitude):
-
     # 1시간 전의 시간을 먼저 가져온다.
     one_hour_ago_date, one_hour_ago_time = calculate_one_hour_ago()
 
@@ -89,7 +89,7 @@ def get_weatherinfo_from_api(latitude, longitude):
     # 필요한건 기온까지이기때문에 30개까지만 조회해도 필요한 PTY, SKY, T1H값을 전부 가져올 수 있음
 
     # 서비스키(decoding)
-    serviceKey = 'Ux3PVlwB8oN9L6Vj/tQUyxOw2lE+EgBDF9cRJMC1QjOYRLNycIvKbjTNF0PVIdtNRIr1SUNi07syDl7VaNLXkw==' 
+    serviceKey = local_properties.weather_key
     pageNo = '1'    # 페이지 번호
     numOfRows = '30'    # 한 페이지 결과 수
     dataType = 'JSON'   # 응답자료형식
@@ -154,4 +154,3 @@ def get_weatherinfo_from_api(latitude, longitude):
         index+=1    
 
     return weather_data["rainType"], weather_data["sky"], weather_data["temp"] # weather_data 딕셔너리를 반환
-

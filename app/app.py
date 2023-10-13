@@ -1,15 +1,15 @@
-from flask import Flask, request, jsonify, g
-from flask_pymongo import PyMongo
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import recommend
-import pandas as pd
 import random
 from apscheduler.schedulers.background import BackgroundScheduler
 from pymongo import MongoClient
-from datetime import datetime
 import weather
+from waitress import serve
 
 app = Flask(__name__)
+
+CORS(app)
 
 # MongoDB 연결
 client = MongoClient("mongodb://localhost:27017/")
@@ -21,12 +21,16 @@ db = client.mechulee_db
 collection_menu = db.menu_list
 collection_ingredient = db.ingredient_list
 
+# 오늘의 메뉴 리스트
+todays_menu = []
+
 # MongoDB에서 전체 메뉴 조회
 def select_menu_list(now_collection):
     menu_list = []
     for menu in now_collection.find({}, {'_id': False}):
         menu_list.append(menu)
     return menu_list
+
 
 # MongoDB에서 전체 재료 조회
 def select_ingredient_list(now_collection):
@@ -36,11 +40,10 @@ def select_ingredient_list(now_collection):
     return ingredient_list
 
 
-CORS(app)
-
-# 오늘의 메뉴 리스트
-todays_menu = []
-
+# 컨텐츠 기반 필터링에서 사용할 메뉴와 재료 임베딩 정보
+temp_menu_list = select_menu_list(collection_menu)
+temp_ingredient_list = select_ingredient_list(collection_ingredient)
+embedding_dict, menu_data, menu_list_dict = recommend.read_meun_data(temp_menu_list, temp_ingredient_list)
 
 # 오늘의 메뉴 선정
 def select_today_menu():
@@ -103,12 +106,6 @@ def get_all_ingredient_items():
 # ai 추천 (liked_ingredients, disliked_ingredients 필요)
 @app.route('/recommend/ai', methods=['POST'])
 def recommend_ai():
-    menu_list = select_menu_list(collection_menu)
-    ingredient_list = select_ingredient_list(collection_ingredient)
-
-    # 컨텐츠 기반 필터링에서 사용할 메뉴와 재료 임베딩 정보
-    embedding_dict, menu_data, menu_list_dict = recommend.read_meun_data(menu_list, ingredient_list)
-    
     data = request.get_json()
     
     totalList = []  # totalList 초기화 (IngredientInfo 객체를 포함하는 빈 리스트)
@@ -173,5 +170,4 @@ if __name__ == '__main__':
     # 서버 시작 하자마자 위치에 따른 기온 모두 받아두기
     weather.loading_location_weather_data()
 
-    # local 테스트를 위해 host='0.0.0.0' 로 설정 -> 추후 변경 필요
-    app.run(host='0.0.0.0', debug=True, port=8000)
+    serve(app, host="0.0.0.0", port=8000)

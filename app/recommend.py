@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from collections import Counter
 from scipy.stats import beta as beta_dist
@@ -47,12 +46,8 @@ def read_meun_data(menu, ingredients):
 
         menu_list_dict[menu['name']] = menu
 
-    print("model 로드 전")
-
     # FastText의 사전 훈련된 워드 임베딩 로드
     model = KeyedVectors.load_word2vec_format('app/cc.ko.300.vec', binary=False, limit=100000)
-
-    print("model 로드 완료")
 
     # 각 재료에 대한 벡터 생성 (재료가 모델에 없으면 랜덤 벡터 사용)
     embedding_dict = {ingredient: model[ingredient] if ingredient in model else np.random.randn(300) for ingredient in ingredient_list}
@@ -61,7 +56,6 @@ def read_meun_data(menu, ingredients):
 
 
 def create_user_vector(liked_ingredients, embedding_dict):
-    
     # 좋아하는 재료들의 출현 횟수 계산
     ingredient_counts = Counter(liked_ingredients)
     total_count = sum(ingredient_counts.values())
@@ -94,7 +88,6 @@ def content_based_filtering_thompson(embedding_dict, menu_data, menu_list_dict, 
                 similarities[0, i] *= 0.5
 
     # 톰슨 샘플링을 이용한 추천 메뉴 선정
-    num_menus = similarities.shape[1]
     adjusted_similarities = similarities + 1  # 범위를 0~2로 변경
     alpha = np.clip((adjusted_similarities - adjusted_similarities.min()) / (adjusted_similarities.max() - adjusted_similarities.min()) * 50, 0.01, None) + 1
     beta_param = 51 - alpha

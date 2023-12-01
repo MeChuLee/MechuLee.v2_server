@@ -3,26 +3,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 from collections import Counter
 from scipy.stats import beta as beta_dist
 import random
-from datetime import datetime
+import datetime
 from gensim.models import KeyedVectors
 
 def read_meun_data(menu, ingredients):
-    # '시간' 컬럼의 값이 '낮' 또는 '밤'인 행 선택
-    now = datetime.now()
-    is_daytime = 7 <= now.hour < 19
-    temp_menu = []
-    
-    for row in menu:
-        if row['delivery'] == 'F': # 배달용인 경우만 처리
-            continue 
-        
-        if is_daytime: # 낮인 상황
-            if row['time'] == '낮':
-                temp_menu.append(row)
-        else: # 밤인 상황
-            if row['time'] == '밤':
-                temp_menu.append(row)
-
     # 딕셔너리 초기화
     menu_data = {}
     menu_list_dict = {}
@@ -32,22 +16,33 @@ def read_meun_data(menu, ingredients):
     for row in ingredients:
         ingredient_list.append(row['name'])
 
-    for row in temp_menu:
+    for row in menu:
+        # row확인용
+        # {'name': '차슈덮밥',
+        #  'ingredients': ['삼겹살', '돼지고기', '양파', '쌀'],
+        #  'weather': '보통',
+        #  'time': '낮',
+        #  'type': '밥',
+        #  'category': '일식',
+        #  'delivery': True}
         # 데이터프레임을 순회하며 '이름'과 '재료'를 딕셔너리에 저장
         menu_name = row['name']
         menu_ingredients = row['ingredients']
         menu_data[menu_name] = menu_ingredients
 
         # 데이터프레임으로 읽어온 메뉴들을 list - dictionary 형태로 변형
-        menu = {}
-        menu['name'] = row['name']
-        menu['ingredients'] = row['ingredients']
-        menu['category'] = row['category']
+        tempMenu = {}
+        tempMenu['name'] = row['name']
+        tempMenu['ingredients'] = row['ingredients']
+        tempMenu['category'] = row['category']
+        tempMenu['time'] = row['time']
+        tempMenu['weather'] = row['weather']
+        tempMenu['delivery'] = row['delivery']
 
-        menu_list_dict[menu['name']] = menu
+        menu_list_dict[tempMenu['name']] = tempMenu
 
-    # FastText의 사전 훈련된 워드 임베딩 로드
-    model = KeyedVectors.load_word2vec_format('app/cc.ko.300.vec', binary=False, limit=100000)
+    # FastText의 사전 훈련된 워드 임베딩 로드, limit은 100만으로 설정
+    model = KeyedVectors.load_word2vec_format('app/cc.ko.300.vec', binary=False, limit=1000000)
 
     # 각 재료에 대한 벡터 생성 (재료가 모델에 없으면 랜덤 벡터 사용)
     embedding_dict = {ingredient: model[ingredient] if ingredient in model else np.random.randn(300) for ingredient in ingredient_list}

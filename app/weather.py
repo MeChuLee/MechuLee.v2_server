@@ -4,23 +4,23 @@ import location_util
 import local_properties
 
 location_weather_data = {
-    "서울특별시": {"latitude": 37,"longitude": 127,"rainType": "","sky": "","temp": ""},
-    "부산광역시": {"latitude": 35,"longitude": 129,"rainType": "", "sky": "","temp": ""},
-    "대구광역시": {"latitude": 35,"longitude": 128,"rainType": "","sky": "","temp": ""},
-    "인천광역시": {"latitude": 37,"longitude": 126,"rainType": "","sky": "","temp": ""},
-    "광주광역시": {"latitude": 35,"longitude": 126,"rainType": "","sky": "","temp": ""},
-    "대전광역시": {"latitude": 36,"longitude": 127,"rainType": "","sky": "","temp": ""},
-    "울산광역시": {"latitude": 35,"longitude": 129,"rainType": "", "sky": "", "temp": ""},
-    "세종특별자치시": {"latitude": 36,"longitude": 127,"rainType": "", "sky": "", "temp": ""},
-    "경기도": {"latitude": 37,"longitude": 127,"rainType": "", "sky": "", "temp": ""},
-    "강원도": {"latitude": 37,"longitude": 128,"rainType": "", "sky": "", "temp": ""},
-    "충청북도": {"latitude": 36,"longitude": 127,"rainType": "", "sky": "", "temp": ""},
-    "충청남도": {"latitude": 36,"longitude": 126,"rainType": "", "sky": "", "temp": ""},
-    "전라북도": {"latitude": 35,"longitude": 127,"rainType": "", "sky": "", "temp": ""},
-    "전라남도": {"latitude": 34,"longitude": 126,"rainType": "", "sky": "", "temp": ""},
-    "경상북도": {"latitude": 36,"longitude": 128,"rainType": "", "sky": "", "temp": ""},
-    "경상남도": {"latitude": 35,"longitude": 128,"rainType": "", "sky": "", "temp": ""},
-    "제주특별자치도": {"latitude": 33,"longitude": 126,"rainType": "", "sky": "", "temp": ""},
+    "서울특별시": {"latitude": 37,"longitude": 127,"rainType": "","sky": "흐림","temp": "10"},
+    "부산광역시": {"latitude": 35,"longitude": 129,"rainType": "", "sky": "흐림","temp": "10"},
+    "대구광역시": {"latitude": 35,"longitude": 128,"rainType": "","sky": "흐림","temp": "10"},
+    "인천광역시": {"latitude": 37,"longitude": 126,"rainType": "","sky": "흐림","temp": "10"},
+    "광주광역시": {"latitude": 35,"longitude": 126,"rainType": "","sky": "흐림","temp": "10"},
+    "대전광역시": {"latitude": 36,"longitude": 127,"rainType": "","sky": "흐림","temp": "10"},
+    "울산광역시": {"latitude": 35,"longitude": 129,"rainType": "", "sky": "흐림", "temp": "10"},
+    "세종특별자치시": {"latitude": 36,"longitude": 127,"rainType": "", "sky": "흐림", "temp": "10"},
+    "경기도": {"latitude": 37,"longitude": 127,"rainType": "", "sky": "흐림", "temp": "10"},
+    "강원도": {"latitude": 37,"longitude": 128,"rainType": "", "sky": "흐림", "temp": "10"},
+    "충청북도": {"latitude": 36,"longitude": 127,"rainType": "", "sky": "흐림", "temp": "10"},
+    "충청남도": {"latitude": 36,"longitude": 126,"rainType": "", "sky": "흐림", "temp": "10"},
+    "전라북도": {"latitude": 35,"longitude": 127,"rainType": "", "sky": "흐림", "temp": "10"},
+    "전라남도": {"latitude": 34,"longitude": 126,"rainType": "", "sky": "흐림", "temp": "10"},
+    "경상북도": {"latitude": 36,"longitude": 128,"rainType": "", "sky": "흐림", "temp": "10"},
+    "경상남도": {"latitude": 35,"longitude": 128,"rainType": "", "sky": "흐림", "temp": "10"},
+    "제주특별자치도": {"latitude": 33,"longitude": 126,"rainType": "", "sky": "흐림", "temp": "10"},
 }
 
 
@@ -30,24 +30,21 @@ def loading_location_weather_data():
         latitude = location_info["latitude"]
         longitude = location_info["longitude"]
 
-        for i in range(10):
+        for _ in range(10):
             try:
                 # 딕셔너리에 있는 value 수 만큼 api를 받아와서 날씨 정보에 저장한다.
                 rain_type, sky, temp = get_weatherinfo_from_api(latitude, longitude)
                 break
-            except Exception as e:
-                if i < 9:  # 아직 최대 시도 횟수에 도달하지 않았다면...
-                    print("실패, 재시도")
-                    continue  # 다음 시도로 넘어감
-                else:  # 최대 시도 횟수에 도달했다면...
-                    print("실패")
-                    raise e from None 
+            except Exception:
+                print("실패, 재시도")
+                continue  # 다음 시도로 넘어감
         
         location_info["rainType"] = rain_type
         location_info["sky"] = sky
         location_info["temp"] = temp
 
         print(location_info)
+    print("날씨 세팅 끝!")
 
 
 def get_weatherinfo_by_location(admin_area):
@@ -120,12 +117,11 @@ def get_weatherinfo_from_api(latitude, longitude):
 
     data = response.json()  # JSON 데이터를 파이썬 객체로 로드합니다.
 
+    index = 0
     # "item" 항목이 리스트인 경우를 가정하여 출력
     for item in data['response']['body']['items']['item']:
         category = item['category']
         fcstValue = item['fcstValue']
-        
-        index = 0
         
         if index % 6 == 0 :
             if category == 'PTY' and fcstValue == '0':

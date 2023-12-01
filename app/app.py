@@ -5,6 +5,7 @@ import random
 from apscheduler.schedulers.background import BackgroundScheduler
 from pymongo import MongoClient
 import weather
+import datetime
 from waitress import serve
 
 app = Flask(__name__)
@@ -41,9 +42,14 @@ def select_ingredient_list(now_collection):
 
 
 # 컨텐츠 기반 필터링에서 사용할 메뉴와 재료 임베딩 정보
+# embedding_dict: dictionary 인지.... 재료별 벡터 값을 의미 하는 것 같음
+#           => 재료 이름: 재료 벡터 값 (300차원)
+# menu_data : dictionary=> 메뉴 이름: [메뉴 재료, , , ... ]
+# menu_list_dic : dictionary=> 메뉴 이름: {'name': '메뉴이름", 'ingredients': [메뉴 재료, , , ...], 'category': '메뉴 카테고리'}
 temp_menu_list = select_menu_list(collection_menu)
 temp_ingredient_list = select_ingredient_list(collection_ingredient)
 embedding_dict, menu_data, menu_list_dict = recommend.read_meun_data(temp_menu_list, temp_ingredient_list)
+
 
 # 오늘의 메뉴 선정
 def select_today_menu():
@@ -106,7 +112,8 @@ def get_all_ingredient_items():
 # ai 추천 (liked_ingredients, disliked_ingredients 필요)
 @app.route('/recommend/ai', methods=['POST'])
 def recommend_ai():
-    data = request.get_json()
+    myRequest = request.get_json()
+    data = myRequest.get('ingredientList')
     
     totalList = []  # totalList 초기화 (IngredientInfo 객체를 포함하는 빈 리스트)
     totalList = data
@@ -128,8 +135,50 @@ def recommend_ai():
         elif rating == 5: #평점이 5점인 경우 liked_ingredients에 4번 삽입
             liked_ingredients.extend([ingredient_info['title'], ingredient_info['title'], ingredient_info['title'], ingredient_info['title']])
 
+    # 낮인지 밤인지 확인
+    now = datetime.datetime.now()
+
+    # local 시간
+    # is_daytime = 7 <= now.hour < 15 
+    
+    # cloud 시간
+    is_daytime = 7 <= now.hour + 9 < 15
+
+    # 날씨 확인
+    nowTemperature = 0
+    if weather.location_weather_data[myRequest.get('nowAddress')]:
+        nowTemperature = int(weather.location_weather_data[myRequest.get('nowAddress')]['temp'])
+    else:
+        nowTemperature = int(weather.location_weather_data['서울특별시']['temp'])
+
+    temp_menu_data = {}
+    temp_menu_list_dict = {}
+
+    for _, value in menu_list_dict.items():
+        # 배달용인 경우만 처리
+        if value['delivery'] == False: 
+            continue
+        
+        # 시간 조건
+        if is_daytime: # 낮인 경우, 밤 메뉴 제외
+            if value['time'] == '밤':
+                continue
+        
+        # 날씨 조건
+        if nowTemperature > 28: # 더운 경우
+            if value['weather'] == '추움':
+                continue
+        elif nowTemperature <= 18: # 추운 경우
+            if value['weather'] == '더움':
+                continue
+        now_menu_name = value['name']
+        
+        temp_menu_data[now_menu_name] = value['ingredients']
+        temp_menu_list_dict[now_menu_name] = value
+
     #content_based_filterting_thompson을 text기반으로 수행하기 때문에 title리스트로 넣어준다.
-    ai_menu = recommend.content_based_filtering_thompson(embedding_dict, menu_data, menu_list_dict, liked_ingredients, disliked_ingredients)
+    # ai_menu = recommend.content_based_filtering_thompson(embedding_dict, menu_data, menu_list_dict, liked_ingredients, disliked_ingredients)
+    ai_menu = recommend.content_based_filtering_thompson(embedding_dict, temp_menu_data, temp_menu_list_dict, liked_ingredients, disliked_ingredients)
 
     return jsonify({'recommendAiResult': ai_menu})
 
